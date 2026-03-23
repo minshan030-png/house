@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>房東稅務即時精算機</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background: #f8fafc; color: #1e293b; }
+        .card-shadow { box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05); }
+        .formula-text { font-family: 'Consolas', monospace; color: #94a3b8; font-size: 0.75rem; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body class="py-10 px-4">
+
+<div class="max-w-5xl mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-10">
+        <h1 class="text-3xl md:text-4xl font-black text-slate-800 mb-3 tracking-tight">🏠 房東稅務即時精算機</h1>
+        <p class="text-slate-500 font-medium text-sm">輸入租金即時試算，無需按鈕更新</p>
+    </div>
+
+    <!-- 即時輸入區 -->
+    <div class="bg-white rounded-[2rem] p-8 mb-8 card-shadow border border-slate-100">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <!-- 租金輸入 -->
+            <div class="relative">
+                <label class="block text-sm font-bold text-slate-600 mb-3 ml-1">每月總租金 (TWD)</label>
+                <div class="group relative">
+                    <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                        <span class="text-xl font-bold">$</span>
+                    </div>
+                    <input type="number" id="monthlyRent" value="45000" oninput="calculate()" 
+                        class="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 outline-none text-2xl font-black text-slate-700 transition-all">
+                </div>
+                <p class="mt-2 text-xs text-slate-400 ml-1">直接輸入數字，結果將立即更新</p>
+            </div>
+
+            <!-- 級距選擇 -->
+            <div class="relative">
+                <label class="block text-sm font-bold text-slate-600 mb-3 ml-1">您的所得稅級距</label>
+                <div class="relative">
+                    <select id="taxBracket" onchange="calculate()" 
+                        class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50 outline-none appearance-none cursor-pointer text-lg font-bold text-slate-700 transition-all">
+                        <option value="0.05">5% (小資族)</option>
+                        <option value="0.12" selected>12% (中產階級)</option>
+                        <option value="0.20">20% (高薪族)</option>
+                        <option value="0.30">30% (高收入)</option>
+                        <option value="0.40">40% (超高收入)</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-5 flex items-center pointer-events-none text-slate-400">
+                        <i class="fa-solid fa-chevron-down text-sm"></i>
+                    </div>
+                </div>
+                <p class="mt-2 text-xs text-slate-400 ml-1">根據您的全年度綜合所得選擇</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 結果顯示區 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- 一般出租 -->
+        <div class="bg-white rounded-3xl p-8 border border-slate-100 card-shadow transition-all hover:scale-[1.02]">
+            <div class="mb-8">
+                <span class="px-3 py-1 bg-slate-100 text-slate-500 rounded-lg text-xs font-bold">一般出租</span>
+                <h3 class="text-lg font-bold mt-3">無政府補助</h3>
+            </div>
+            <div class="space-y-6">
+                <div>
+                    <p class="text-slate-400 text-xs mb-1 font-bold">年度應稅所得</p>
+                    <p class="text-2xl font-black text-slate-700" id="normalTaxable">$0</p>
+                    <p class="formula-text mt-1" id="normalTaxableFormula"></p>
+                </div>
+                <div class="pt-6 border-t border-slate-50">
+                    <p class="text-slate-400 text-xs mb-1 font-bold">預估所得稅額</p>
+                    <p class="text-3xl font-black text-slate-800" id="normalTax">$0</p>
+                    <p class="formula-text mt-1" id="normalTaxFormula"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 公益出租 -->
+        <div class="bg-white rounded-3xl p-8 border-2 border-blue-100 card-shadow transition-all hover:scale-[1.02] relative">
+            <div class="mb-8">
+                <span class="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs font-bold">公益出租 (租補)</span>
+                <h3 class="text-lg font-bold mt-3 text-blue-900">房客申請租金補貼</h3>
+            </div>
+            <div class="space-y-6">
+                <div>
+                    <p class="text-blue-400 text-xs mb-1 font-bold">年度應稅所得</p>
+                    <p class="text-2xl font-black text-blue-700" id="publicTaxable">$0</p>
+                    <p class="formula-text mt-1 text-blue-300" id="publicTaxableFormula"></p>
+                </div>
+                <div class="pt-6 border-t border-blue-50">
+                    <p class="text-blue-400 text-xs mb-1 font-bold">預估所得稅額</p>
+                    <p class="text-3xl font-black text-blue-900" id="publicTax">$0</p>
+                    <p class="formula-text mt-1 text-blue-300" id="publicTaxFormula"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 社會住宅 -->
+        <div class="bg-emerald-50 rounded-3xl p-8 border-2 border-emerald-500 card-shadow transition-all hover:scale-[1.02] relative">
+            <div class="mb-8 flex justify-between items-start">
+                <div>
+                    <span class="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold uppercase">社會住宅</span>
+                    <h3 class="text-lg font-bold mt-3 text-emerald-900">包租代管 (最省)</h3>
+                </div>
+                <div class="text-emerald-600 bg-white p-2 rounded-xl shadow-sm">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+            </div>
+            <div class="space-y-6">
+                <div>
+                    <p class="text-emerald-600 text-xs mb-1 font-bold">年度應稅所得</p>
+                    <p class="text-2xl font-black text-emerald-700" id="socialTaxable">$0</p>
+                    <p class="formula-text mt-1 text-emerald-400" id="socialTaxableFormula"></p>
+                </div>
+                <div class="pt-6 border-t border-emerald-200">
+                    <p class="text-emerald-600 text-xs mb-1 font-bold">預估所得稅額</p>
+                    <p class="text-3xl font-black text-emerald-900" id="socialTax">$0</p>
+                    <p class="formula-text mt-1 text-emerald-400" id="socialTaxFormula"></p>
+                </div>
+            </div>
+            <div class="mt-8 py-3 px-4 bg-emerald-600 rounded-xl text-white flex items-center justify-between">
+                <span class="text-xs font-bold opacity-80 uppercase">省錢幅度</span>
+                <span class="text-lg font-black" id="totalSave">$0</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 底部資訊 -->
+    <div class="mt-10 bg-slate-800 rounded-3xl p-8 text-white">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
+            <div>
+                <h4 class="text-emerald-400 font-bold mb-2">社會住宅為什麼最省？</h4>
+                <p class="text-slate-400 text-sm leading-relaxed">除了每月 1.5 萬免稅額，政府認定成本費用率為 <span class="text-white font-bold">60%</span>，優於一般出租的 43%。</p>
+            </div>
+            <div>
+                <h4 class="text-blue-400 font-bold mb-2">公益出租人優勢</h4>
+                <p class="text-slate-400 text-sm leading-relaxed">只要房客去申請租金補貼，您就自動成為公益出租人，免申請即可享所得稅優惠。</p>
+            </div>
+            <div>
+                <h4 class="text-slate-400 font-bold mb-2">更多隱形福利</h4>
+                <p class="text-slate-400 text-sm leading-relaxed">公益及社宅房東，其房屋稅及地價稅皆適用「自住稅率」，此試算尚未計入，實際省更多。</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function format(num) {
+        return num.toLocaleString('en-US');
+    }
+
+    function calculate() {
+        const rent = parseFloat(document.getElementById('monthlyRent').value) || 0;
+        const bracket = parseFloat(document.getElementById('taxBracket').value);
+        const bracketDisplay = (bracket * 100) + "%";
+
+        // 1. 一般出租
+        const normalTaxable = rent * 12 * 0.57; // (1 - 0.43)
+        const normalTax = normalTaxable * bracket;
+
+        document.getElementById('normalTaxable').innerText = "$" + format(Math.round(normalTaxable));
+        document.getElementById('normalTaxableFormula').innerText = `(${format(rent)}-0) × 12 × (1-43%)`;
+        document.getElementById('normalTax').innerText = "$" + format(Math.round(normalTax));
+        document.getElementById('normalTaxFormula').innerText = `${format(Math.round(normalTaxable))} × ${bracketDisplay}`;
+
+        // 2. 公益出租
+        const publicExempt = 15000;
+        const publicMonthly = Math.max(0, rent - publicExempt);
+        const publicTaxable = publicMonthly * 12 * 0.57; // (1 - 0.43)
+        const publicTax = publicTaxable * bracket;
+
+        document.getElementById('publicTaxable').innerText = "$" + format(Math.round(publicTaxable));
+        document.getElementById('publicTaxableFormula').innerText = `(${format(rent)}-1.5萬) × 12 × (1-43%)`;
+        document.getElementById('publicTax').innerText = "$" + format(Math.round(publicTax));
+        document.getElementById('publicTaxFormula').innerText = `${format(Math.round(publicTaxable))} × ${bracketDisplay}`;
+
+        // 3. 社會住宅
+        const socialTaxable = publicMonthly * 12 * 0.40; // (1 - 0.60)
+        const socialTax = socialTaxable * bracket;
+
+        document.getElementById('socialTaxable').innerText = "$" + format(Math.round(socialTaxable));
+        document.getElementById('socialTaxableFormula').innerText = `(${format(rent)}-1.5萬) × 12 × (1-60%)`;
+        document.getElementById('socialTax').innerText = "$" + format(Math.round(socialTax));
+        document.getElementById('socialTaxFormula').innerText = `${format(Math.round(socialTaxable))} × ${bracketDisplay}`;
+
+        // 省錢總額 (一般 vs 社宅)
+        const totalSave = normalTax - socialTax;
+        document.getElementById('totalSave').innerText = "$" + format(Math.round(totalSave));
+    }
+
+    // 頁面載入自動計算
+    window.onload = calculate;
+</script>
+
+</body>
+</html>
